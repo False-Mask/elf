@@ -17,3 +17,7 @@
 ![](img/elf-section-headers.png)
 
 
+> Symbol Table
+
+![](img/elf-section-symtab-1.png)
+![](img/elf-section-symtab-2.png)
