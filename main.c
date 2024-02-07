@@ -22,6 +22,8 @@ void printfSectionHeader(Elf64_Shdr* header,int index);
 void printfSection(Elf64_Ehdr*,Elf64_Shdr*);
 // 打印symbol table (.symtab & .dynsym section)
 void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
+// 打印rela table
+void printfRelaTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
 // 初始化全局遍历
 void initGlobal(char* buf,int len);
 
@@ -148,6 +150,7 @@ void printfSectionHeader(Elf64_Shdr* header,int index) {
 void printfSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
 
     printfSymTabSection(ehdr,shdr);
+    printfRelaTabSection(ehdr,shdr);
 
 }
 
@@ -190,4 +193,26 @@ void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
         }
     }
 
+}
+
+void printfRelaTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
+    for(int i = 0;i < ehdr->e_shnum; i++) {
+        Elf64_Shdr* sectionHeader = shdr + i;
+        if(sectionHeader->sh_type == SHT_RELA) {
+            char* sectionName = shstrTab + sectionHeader->sh_name;
+            printf("\n\nSections: %s :",sectionName);
+            Elf64_Rela* section = (void *)ehdr + sectionHeader->sh_offset;
+            //打印内容
+            printf("\n%-10s %-10s %-10s","offset","info","addend");
+            int n = sectionHeader->sh_size / sectionHeader->sh_entsize;
+            for(int i = 0;i < n; i++) {
+                Elf64_Rela* rela = section + i;
+                Elf64_Addr offset = rela->r_offset;
+                Elf64_Xword info = rela->r_info;
+                Elf64_Sword addend = rela->r_addend;
+                printf("\n%-10x %-10x %-10x",offset,info,addend);
+            }
+            
+        }
+    }
 }
