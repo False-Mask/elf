@@ -24,6 +24,8 @@ void printfSection(Elf64_Ehdr*,Elf64_Shdr*);
 void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
 // 打印rela table
 void printfRelaTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
+// 打印phdr
+void printfProgramHeader();
 // 初始化全局遍历
 void initGlobal(char* buf,int len);
 
@@ -66,6 +68,7 @@ int main() {
 void initGlobal(char* buf, int len) {
     ehdr = (Elf64_Ehdr*) buf;
     shdr = (Elf64_Shdr*) (buf + ehdr->e_shoff);
+    phdr = (Elf64_Phdr*) (buf + ehdr->e_phoff);
     // shstrTab
     Elf64_Shdr* strSectionHeader = shdr + ehdr->e_shstrndx;
     shstrTab = buf + strSectionHeader->sh_offset;
@@ -151,6 +154,7 @@ void printfSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
 
     printfSymTabSection(ehdr,shdr);
     printfRelaTabSection(ehdr,shdr);
+    printfProgramHeader();
 
 }
 
@@ -216,3 +220,24 @@ void printfRelaTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
         }
     }
 }
+
+void printfProgramHeader() {
+
+    int n = ehdr->e_phnum;
+    printf("\n\nProgram Headers:");
+    printf("\n%-8s %-8s %-8s %-16s %-16s %-16s %-16s %-16s %-16s","idx","type","flag","offset","vaddr","paddr","filesz","memsz","align");
+    for(int i = 0;i < n; i++) {
+        Elf64_Phdr* ph = phdr + i;
+        Elf64_Word type = ph->p_type;
+        Elf64_Word flag = ph->p_flags;
+        Elf64_Off offset = ph->p_offset;
+        Elf64_Addr vaddr = ph->p_vaddr;
+        Elf64_Addr paddr = ph->p_paddr;
+        Elf64_Xword filesz = ph->p_filesz;
+        Elf64_Xword memsz = ph->p_memsz;
+        Elf64_Xword align = ph->p_align;
+        printf("\n%-8d %-8x %-8x %-16x %-16x %-16x %-16x %-16x %-16x",i,type,flag,offset,vaddr,paddr,filesz,memsz,align);   
+    }
+
+}
+
