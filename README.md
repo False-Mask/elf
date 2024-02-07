@@ -19,5 +19,11 @@
 
 > Symbol Table
 
+- .dynsym section
+
+![](img/elf-section-dynsym.png)
+
+- .symtab section
+
 ![](img/elf-section-symtab-1.png)
 ![](img/elf-section-symtab-2.png)

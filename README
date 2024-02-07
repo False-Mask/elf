@@ -1,5 +1,0 @@
-# 关于本仓库
-
-在学习ELF文件格式过程中写的小Demo，通过使用GNU/GCC usr/include/elf.h头文件进行ELF文件的解析
-
-

@@ -25,9 +25,11 @@ void printfSection(Elf64_Ehdr*,Elf64_Shdr*);
 char* strTab = NULL;
 // .shstrtab
 char* shstrTab = NULL;
+// .dynstr
+char* dynStrTab = NULL;
 
 // 打印.symtab section
-void printfSymTabSection(Elf64_Sym* symbol,int n);
+void printfSymTabSection(Elf64_Shdr*,Elf64_Sym* symbol,int n);
 
 int main() {
 
@@ -101,8 +103,11 @@ void printfSectionHeaders(Elf64_Ehdr* header) {
         Elf64_Shdr* shdr = section + i;
         printfSectionHeader(shdr,i);
         // 记录.strtab section位置
-        if(strcmp(strSection + shdr->sh_name, ".strtab") == 0) {
+        char * realName = strSection + shdr->sh_name;
+        if(strcmp(realName, ".strtab") == 0) {
             strTab = h + shdr->sh_offset; 
+        } else if(strcmp(realName,".dynstr") == 0) {
+            dynStrTab = h + shdr->sh_offset;
         }
     }
 
@@ -140,15 +145,17 @@ void printfSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
     void* header = ehdr;
     void* sectionBegin = header + shdr->sh_offset;
     // 打印SYMTAB中的符号表
-    if(shdr->sh_type == SHT_SYMTAB) {
+    if(shdr->sh_type == SHT_SYMTAB ||
+       shdr->sh_type == SHT_DYNSYM ) {
         printf("\n\nSection %s :",sectionName);
-        printfSymTabSection(sectionBegin,shdr->sh_size / shdr->sh_entsize);
+        printfSymTabSection(shdr,sectionBegin,shdr->sh_size / shdr->sh_entsize);
     }
 
 }
 
-void printfSymTabSection(Elf64_Sym* symbol,int n) {
+void printfSymTabSection(Elf64_Shdr* shdr, Elf64_Sym* symbol,int n) {
     printf("\n%-3s %-38s %-8s %-8s %-8s %-16s %-16s","idx","name","info","other","shndx","value","size");
+    char* sectionName = shstrTab + shdr->sh_name;
     for(int i = 0;i < n; i++) {
         Elf64_Sym* cur = symbol + i;
         //打印每一条entry内容
@@ -158,6 +165,13 @@ void printfSymTabSection(Elf64_Sym* symbol,int n) {
         Elf64_Section shndx = cur->st_shndx;
         Elf64_Addr value = cur->st_value;
         Elf64_Xword size = cur->st_size;
-        printf("\n%-3d %-38s %-8x %-8x %-8x %-16x %-16x",i,strTab + name,info,other,shndx,value,size);
+
+        char* realName = NULL;
+        if(strcmp(sectionName,".symtab") == 0) {
+            realName = strTab + name;
+        } else {
+            realName = dynStrTab + name;
+        }
+        printf("\n%-3d %-38s %-8x %-8x %-8x %-16x %-16x",i,realName,info,other,shndx,value,size);
     }
 }
