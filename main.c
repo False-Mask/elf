@@ -11,7 +11,7 @@
 #include <string.h>
 
 // 打印整个ELF文件
-void printfElf(void* buf,int len);
+void printfElf();
 // 打印ELF Header
 void printfElfHeader(Elf64_Ehdr* header);
 // 打印ELF所有Section Headers
@@ -20,16 +20,23 @@ void printfSectionHeaders(Elf64_Ehdr* header);
 void printfSectionHeader(Elf64_Shdr* header,int index);
 // 打印Section内容
 void printfSection(Elf64_Ehdr*,Elf64_Shdr*);
+// 打印symbol table (.symtab & .dynsym section)
+void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
+// 初始化全局遍历
+void initGlobal(char* buf,int len);
 
+// ELF header
+Elf64_Ehdr* ehdr = NULL;
+// Section Header
+Elf64_Shdr* shdr = NULL;
+// Program Header
+Elf64_Phdr* phdr = NULL;
 // .strtab
 char* strTab = NULL;
 // .shstrtab
 char* shstrTab = NULL;
 // .dynstr
 char* dynStrTab = NULL;
-
-// 打印.symtab section
-void printfSymTabSection(Elf64_Shdr*,Elf64_Sym* symbol,int n);
 
 int main() {
 
@@ -48,18 +55,39 @@ int main() {
     char * buf = (char*) malloc(len);
     int readLen = fread(buf,1,len,fd);
 
-    printfElf(buf,readLen);
-
+    initGlobal(buf, readLen);
+    printfElf();
     free(buf);
+
+}
+
+void initGlobal(char* buf, int len) {
+    ehdr = (Elf64_Ehdr*) buf;
+    shdr = (Elf64_Shdr*) (buf + ehdr->e_shoff);
+    // shstrTab
+    Elf64_Shdr* strSectionHeader = shdr + ehdr->e_shstrndx;
+    shstrTab = buf + strSectionHeader->sh_offset;
+
+    // 记录.strtab section位置
+    for(int i = 0;i < ehdr->e_shnum; i++) {
+        // 遍历所有的section
+        Elf64_Shdr* section = shdr + i;
+        // check section 名称
+        char * realName = shstrTab + section->sh_name;
+        if(strcmp(realName, ".strtab") == 0) {
+            strTab = buf + section->sh_offset; 
+        } else if(strcmp(realName,".dynstr") == 0) {
+            dynStrTab = buf + section->sh_offset;
+        }
+    }
 
 
 }
 
-void printfElf(void *buf,int len) {
-    Elf64_Ehdr * elf = (Elf64_Ehdr*) buf;
-    printfElfHeader(elf);
-    printfSectionHeaders(elf);
-
+void printfElf() {
+    printfElfHeader(ehdr);
+    printfSectionHeaders(ehdr);
+    printfSection(ehdr,shdr);
 }
 
 void printfElfHeader(Elf64_Ehdr* header) {
@@ -94,32 +122,11 @@ void printfSectionHeaders(Elf64_Ehdr* header) {
     printf("\n%-03s %-018s %-08s %-016s %-016s %-08s %-016s %-016s %-08s %-016s %-016s"
     ,"idx","name","type","flag","execAddr","offset","size","link","info","align","entrySize");
 
-    // 获取string table
-    Elf64_Shdr* strSectionHeader = section + header->e_shstrndx;
-    char* strSection = h + strSectionHeader->sh_offset;
-    shstrTab = h + strSectionHeader->sh_offset;
     // 遍历Section Header Table，打印所有的Section
     for(int i = 0;i < n; i++) {
         Elf64_Shdr* shdr = section + i;
         printfSectionHeader(shdr,i);
-        // 记录.strtab section位置
-        char * realName = strSection + shdr->sh_name;
-        if(strcmp(realName, ".strtab") == 0) {
-            strTab = h + shdr->sh_offset; 
-        } else if(strcmp(realName,".dynstr") == 0) {
-            dynStrTab = h + shdr->sh_offset;
-        }
     }
-
-    // check string table是否寻找到
-    if(strTab == NULL) {
-        printf("\nerror: 无法找到.strtab section");
-    }
-
-    for(int i = 0;i < n; i++) {
-        printfSection(header,section + i);
-    }
-
 }
 
 
@@ -139,39 +146,48 @@ void printfSectionHeader(Elf64_Shdr* header,int index) {
 
 
 void printfSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
-    // 从shstrtab section中读取section name
-    char* sectionName = shstrTab + shdr->sh_name;
-    // 计算section开始位置
-    void* header = ehdr;
-    void* sectionBegin = header + shdr->sh_offset;
-    // 打印SYMTAB中的符号表
-    if(shdr->sh_type == SHT_SYMTAB ||
-       shdr->sh_type == SHT_DYNSYM ) {
-        printf("\n\nSection %s :",sectionName);
-        printfSymTabSection(shdr,sectionBegin,shdr->sh_size / shdr->sh_entsize);
-    }
+
+    printfSymTabSection(ehdr,shdr);
 
 }
 
-void printfSymTabSection(Elf64_Shdr* shdr, Elf64_Sym* symbol,int n) {
-    printf("\n%-3s %-38s %-8s %-8s %-8s %-16s %-16s","idx","name","info","other","shndx","value","size");
-    char* sectionName = shstrTab + shdr->sh_name;
-    for(int i = 0;i < n; i++) {
-        Elf64_Sym* cur = symbol + i;
-        //打印每一条entry内容
-        Elf64_Word name = cur->st_name;
-        unsigned char info = cur->st_info;
-        unsigned char other = cur->st_other;
-        Elf64_Section shndx = cur->st_shndx;
-        Elf64_Addr value = cur->st_value;
-        Elf64_Xword size = cur->st_size;
+void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
 
-        char* realName = NULL;
-        if(strcmp(sectionName,".symtab") == 0) {
-            realName = strTab + name;
-        } else {
-            realName = dynStrTab + name;
+    for(int i = 0;i < ehdr->e_shnum; i++) {
+        Elf64_Shdr* section = shdr + i;
+        // 从shstrtab section中读取section name
+        char* sectionName = shstrTab + section->sh_name;
+        // 计算section开始位置
+        void* header = ehdr;
+        void* sectionBegin = header + section->sh_offset;
+        // 打印SYMTAB中的符号表
+        if(section->sh_type == SHT_SYMTAB ||
+           section->sh_type == SHT_DYNSYM ) {
+            printf("\n\nSection %s :",sectionName);
+            // 遍历打印所有符号
+            int n = section->sh_size / section->sh_entsize;
+            Elf64_Sym* symbol = sectionBegin;
+            printf("\n%-3s %-38s %-8s %-8s %-8s %-16s %-16s","idx","name","info","other","shndx","value","size");
+            char* sectionName = shstrTab + section->sh_name;
+            for(int i = 0;i < n; i++) {
+                Elf64_Sym* cur = symbol + i;
+                //打印每一条entry内容
+                Elf64_Word name = cur->st_name;
+                unsigned char info = cur->st_info;
+                unsigned char other = cur->st_other;
+                Elf64_Section shndx = cur->st_shndx;
+                Elf64_Addr value = cur->st_value;
+                Elf64_Xword size = cur->st_size;
+
+                char* realName = NULL;
+                if(strcmp(sectionName,".symtab") == 0) {
+                    realName = strTab + name;
+                } else {
+                    realName = dynStrTab + name;
+                }
+                printf("\n%-3d %-38s %-8x %-8x %-8x %-16x %-16x",i,realName,info,other,shndx,value,size);
+            }
         }
-        printf("\n%-3d %-38s %-8x %-8x %-8x %-16x %-16x",i,realName,info,other,shndx,value,size);
     }
+
 }
