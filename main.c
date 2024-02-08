@@ -146,7 +146,7 @@ void printfSectionHeader(Elf64_Shdr* header,int index) {
     Elf64_Word info = header->sh_info;
     Elf64_Xword align = header->sh_addralign;
     Elf32_Xword entrySize = header->sh_entsize;
-    printf("\n%03d %-018s %-8X %-16X %-16X %-8X %-16X %-16X %-8X %-16X %-16X",index,shstrTab + name,type,flag,execAddr,fileOffset,size,link,info,align,entrySize);
+    printf("\n%03d %-018s %-8X %-16lX %-16lX %-8X %-16lX %-16lX %-8X %-16lX %-16lX",index,shstrTab + name,type,flag,execAddr,fileOffset,size,link,info,align,entrySize);
 }
 
 
@@ -192,7 +192,7 @@ void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
                 } else {
                     realName = dynStrTab + name;
                 }
-                printf("\n%-3d %-38s %-8x %-8x %-8x %-16x %-16x",i,realName,info,other,shndx,value,size);
+                printf("\n%-3d %-38s %-8x %-8x %-8x %-16lX %-16lX",i,realName,info,other,shndx,value,size);
             }
         }
     }
@@ -207,14 +207,14 @@ void printfRelaTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
             printf("\n\nSections: %s :",sectionName);
             Elf64_Rela* section = (void *)ehdr + sectionHeader->sh_offset;
             //打印内容
-            printf("\n%-10s %-10s %-10s","offset","info","addend");
+            printf("\n%-16s %-16s %-16s","offset","info","addend");
             int n = sectionHeader->sh_size / sectionHeader->sh_entsize;
             for(int i = 0;i < n; i++) {
                 Elf64_Rela* rela = section + i;
                 Elf64_Addr offset = rela->r_offset;
                 Elf64_Xword info = rela->r_info;
-                Elf64_Sword addend = rela->r_addend;
-                printf("\n%-10x %-10x %-10x",offset,info,addend);
+                Elf64_Sxword addend = rela->r_addend;
+                printf("\n%-16lx %-16lx %-16lx",offset,info,addend);
             }
             
         }
@@ -236,7 +236,7 @@ void printfProgramHeader() {
         Elf64_Xword filesz = ph->p_filesz;
         Elf64_Xword memsz = ph->p_memsz;
         Elf64_Xword align = ph->p_align;
-        printf("\n%-8d %-8x %-8x %-16x %-16x %-16x %-16x %-16x %-16x",i,type,flag,offset,vaddr,paddr,filesz,memsz,align);   
+        printf("\n%-8d %-8x %-8x %-16lX %-16lX %-16lX %-16lX %-16lX %-16lX",i,type,flag,offset,vaddr,paddr,filesz,memsz,align);   
     }
 
 }
