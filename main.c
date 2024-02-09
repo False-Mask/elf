@@ -26,6 +26,8 @@ void printfSymTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
 void printfRelaTabSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr);
 // 打印phdr
 void printfProgramHeader();
+// 打印.dynamic Section
+void printfDynamic();
 // 初始化全局遍历
 void initGlobal(char* buf,int len);
 
@@ -155,6 +157,7 @@ void printfSection(Elf64_Ehdr* ehdr, Elf64_Shdr* shdr) {
     printfSymTabSection(ehdr,shdr);
     printfRelaTabSection(ehdr,shdr);
     printfProgramHeader();
+    printfDynamic();
 
 }
 
@@ -241,3 +244,70 @@ void printfProgramHeader() {
 
 }
 
+void printfDynamic() {
+    int n = ehdr->e_shnum;
+    for(int i = 0;i < n;i++) {
+        Elf64_Shdr* shi = shdr + i;
+        if(strcmp(shstrTab + shi->sh_name,".dynamic") == 0) {
+            printf("\n\nSections: %s :",shstrTab + shi->sh_name);
+            printf("\n%-16s %-16s","tag","value");
+            Elf64_Dyn* d =  (Elf64_Dyn*)((void* )ehdr + shi->sh_offset); 
+            // DT_NULL为结尾标记，表示遍历完成
+            while(d->d_tag != DT_NULL) {
+                Elf64_Sxword tag = d->d_tag;
+                Elf64_Xword value = d->d_un.d_val;
+                if(tag == DT_NEEDED) {
+                    printf("\n%-16s %-16s","DT_NEEDED",dynStrTab + value);
+                } else if(tag == DT_PLTRELSZ) {
+                    printf("\n%-16s %d bytes","DT_PLTRELSZ",value);
+                } else if(tag == DT_PLTGOT) {
+                    printf("\n%-16s 0x%-16x","DT_PLTGOT",value);
+                } else if(tag == DT_HASH) {
+                    printf("\n%-16s 0x%-16x","DT_HASH",value);
+                } else if(tag == DT_STRTAB) {
+                    printf("\n%-16s 0x%-16x","DT_STRTAB",value);
+                } else if(tag == DT_SYMTAB) {
+                    printf("\n%-16s 0x%-16x","DT_SYMTAB",value);
+                } else if(tag == DT_RELA) {
+                    printf("\n%-16s 0x%-16x","DT_RELA",value);
+                } else if(tag == DT_RELASZ) {
+                    printf("\n%-16s %d bytes","DT_RELASZ",value);
+                } else if(tag == DT_RELAENT) {
+                    printf("\n%-16s %d bytes","DT_RELAENT",value);
+                } else if(tag == DT_STRSZ) {
+                    printf("\n%-16s %d","DT_STRSZ",value);
+                } else if(tag == DT_SYMENT) {
+                    printf("\n%-16s %d","DT_SYMENT",value);
+                } else if(tag == DT_INIT) {
+                    printf("\n%-16s 0x%-16x","DT_INIT",value);
+                } else if(tag == DT_FINI) {
+                    printf("\n%-16s 0x%-16x","DT_FINI",value);
+                } else if (tag == DT_SONAME) {
+                    printf("\n%-16s %s","DT_SONAME",dynStrTab + value);
+                } else if (tag == DT_RPATH) {
+                    printf("\n%-16s %s","DT_RPATH",dynStrTab + value);
+                } else if(tag == DT_PLTREL) {
+                    printf("\n%-16s %x","DT_PLTREL",value);
+                } else if(tag == DT_TEXTREL){
+                    printf("\n%-16s 0x%-16x","DT_TEXTREL",value);
+                } else if(tag == DT_JMPREL) {
+                    printf("\n%-16s 0x%-16x","DT_JMPREL",value);
+                } else if(tag == DT_INIT_ARRAY) {
+                    printf("\n%-16s 0x%-16x","DT_INIT_ARRAY",value);
+                } else if(tag == DT_FINI_ARRAY){
+                    printf("\n%-16s 0x%-16x","DT_FINI_ARRAY",value);
+                } else if(tag == DT_INIT_ARRAYSZ){
+                    printf("\n%-16s %d","DT_INIT_ARRAYSZ",value);
+                } else if(tag == DT_FINI_ARRAYSZ){
+                    printf("\n%-16s %d","DT_FINI_ARRAYSZ",value);
+                } else if(tag == DT_DEBUG) {
+                    printf("\n%-16s 0x%x","DT_DEBUG",value);
+                } else {
+                    printf("\n%-16lx %-16lx",tag,value);
+                }
+                d++;
+            }
+        }
+    }
+
+}
