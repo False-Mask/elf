@@ -27,3 +27,17 @@
 
 ![](img/elf-section-symtab-1.png)
 ![](img/elf-section-symtab-2.png)
+
+
+> Relocation
+
+![](img/elf-section-relocation.png)
+
+> .dynamic
+
+![](img/elf-section-dynamic.png)
+
+
+> Program Header
+
+![](img/elf-program-header.png)
